@@ -1,6 +1,8 @@
 import { Pool, PoolClient, QueryResult } from "pg";
 import { Connector, IpAddressTypes, AuthTypes } from "@google-cloud/cloud-sql-connector";
 
+export type IpType = "PUBLIC" | "PRIVATE" | "PSC";
+
 export interface ConnectionConfig {
   instanceConnectionName?: string; // projects/PROJECT/locations/REGION/instances/INSTANCE
   host?: string;                   // Direct host (fallback / Cloud SQL Auth Proxy)
@@ -9,6 +11,7 @@ export interface ConnectionConfig {
   user: string;
   password?: string;
   useIAMAuth?: boolean;            // Use IAM DB authentication (no password needed)
+  ipType?: IpType;                 // IP type for Cloud SQL Connector (default: PSC)
   ssl?: boolean;
 }
 
@@ -51,9 +54,15 @@ export async function initializePool(config: ConnectionConfig): Promise<void> {
   if (config.instanceConnectionName) {
     // Use Cloud SQL Connector (recommended - handles IAM auth + SSL automatically)
     connector = new Connector();
+    const ipTypeMap: Record<IpType, IpAddressTypes> = {
+      PUBLIC: IpAddressTypes.PUBLIC,
+      PRIVATE: IpAddressTypes.PRIVATE,
+      PSC: IpAddressTypes.PSC,
+    };
+    const resolvedIpType = ipTypeMap[config.ipType ?? "PSC"];
     const clientOpts = await connector.getOptions({
       instanceConnectionName: config.instanceConnectionName,
-      ipType: IpAddressTypes.PUBLIC,
+      ipType: resolvedIpType,
       ...(config.useIAMAuth ? { authType: AuthTypes.IAM } : {}),
     });
 

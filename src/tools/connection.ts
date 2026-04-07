@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { initializePool, closePool, getPool } from "../services/database.js";
+import { initializePool, closePool, getPool, IpType } from "../services/database.js";
 
 export function registerConnectionTools(server: McpServer): void {
   server.registerTool(
@@ -24,6 +24,7 @@ Args:
   - user (string): Database user
   - password (string, optional): Password (omit when using IAM auth)
   - use_iam_auth (boolean, optional): Use IAM database authentication (default: false)
+  - ip_type (string, optional): IP type for Cloud SQL Connector: PUBLIC, PRIVATE, or PSC (default: PSC)
   - ssl (boolean, optional): Enable SSL for direct connections (default: false)
 
 Returns: Connection status message.
@@ -43,6 +44,7 @@ Examples:
         user: z.string().min(1).describe("Database user"),
         password: z.string().optional().describe("Password (omit for IAM auth)"),
         use_iam_auth: z.boolean().default(false).describe("Use IAM database authentication"),
+        ip_type: z.enum(["PUBLIC", "PRIVATE", "PSC"]).default("PSC").describe("IP type for Cloud SQL Connector: PUBLIC, PRIVATE, or PSC (default: PSC)"),
         ssl: z.boolean().default(false).describe("Enable SSL for direct connections"),
       }).strict(),
       annotations: {
@@ -71,11 +73,12 @@ Examples:
           user: params.user,
           password: params.password,
           useIAMAuth: params.use_iam_auth,
+          ipType: params.ip_type as IpType,
           ssl: params.ssl,
         });
 
         const method = params.instance_connection_name
-          ? `Cloud SQL Connector → ${params.instance_connection_name}`
+          ? `Cloud SQL Connector (${params.ip_type}) → ${params.instance_connection_name}`
           : `Direct → ${params.host}:${params.port}`;
 
         return {

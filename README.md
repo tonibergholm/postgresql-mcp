@@ -21,7 +21,7 @@ An MCP server for Claude Code (and other MCP clients) to connect to and query GC
 
 ### 1. Cloud SQL Connector (recommended)
 
-Uses the [Cloud SQL Go/Node Connector](https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector) — handles IAM auth and SSL automatically. Requires Application Default Credentials.
+Uses the [Cloud SQL Node Connector](https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector) — handles IAM auth and SSL automatically. Requires Application Default Credentials.
 
 ```bash
 gcloud auth application-default login
@@ -35,6 +35,7 @@ cloudsql_connect:
   database: "mydb"
   user: "myuser"
   password: "secret"
+  ip_type: "PSC"  # PUBLIC, PRIVATE, or PSC (default: PSC)
 ```
 
 ### 2. IAM Database Authentication (passwordless)
