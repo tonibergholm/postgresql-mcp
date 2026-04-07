@@ -102,6 +102,24 @@ Or edit `~/.claude/claude.json` manually:
 }
 ```
 
+### Add to Cursor
+
+Open Cursor Settings > MCP and add a new server, or edit `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "gcp-cloudsql": {
+      "command": "node",
+      "args": ["/path/to/gcp-cloudsql-mcp-server/dist/index.js"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/sa-key.json"
+      }
+    }
+  }
+}
+```
+
 ### HTTP mode (for remote/shared access)
 
 ```bash
