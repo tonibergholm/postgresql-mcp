@@ -1,0 +1,23 @@
+{
+  "name": "gcp-cloudsql-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for GCP Cloud SQL PostgreSQL access",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.4.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "pg": "^8.13.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.6.3"
+  }
+}
