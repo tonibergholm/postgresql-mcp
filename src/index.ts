@@ -5,7 +5,8 @@ import express from "express";
 import { registerConnectionTools } from "./tools/connection.js";
 import { registerQueryTools } from "./tools/query.js";
 import { registerWriteTools } from "./tools/write.js";
-import { closePool } from "./services/database.js";
+import { closePool, initializePool } from "./services/database.js";
+import { loadConnectionConfig } from "./services/config.js";
 
 const server = new McpServer({
   name: "gcp-cloudsql-mcp-server",
@@ -15,6 +16,19 @@ const server = new McpServer({
 registerConnectionTools(server);
 registerQueryTools(server);
 registerWriteTools(server);
+
+async function autoConnectFromSavedConfig(): Promise<void> {
+  const saved = loadConnectionConfig();
+  if (!saved) return;
+  try {
+    await initializePool(saved);
+    const target = saved.instanceConnectionName ?? `${saved.host}:${saved.port ?? 5432}`;
+    console.error(`[auto-connect] Restored connection to "${saved.database}" (${target})`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[auto-connect] Could not restore saved connection: ${msg}`);
+  }
+}
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
@@ -58,14 +72,17 @@ async function runHTTP(): Promise<void> {
 }
 
 const transport = process.env.TRANSPORT ?? "stdio";
-if (transport === "http") {
-  runHTTP().catch((err) => {
-    console.error("Server error:", err);
-    process.exit(1);
-  });
-} else {
-  runStdio().catch((err) => {
-    console.error("Server error:", err);
-    process.exit(1);
-  });
-}
+
+autoConnectFromSavedConfig().then(() => {
+  if (transport === "http") {
+    runHTTP().catch((err) => {
+      console.error("Server error:", err);
+      process.exit(1);
+    });
+  } else {
+    runStdio().catch((err) => {
+      console.error("Server error:", err);
+      process.exit(1);
+    });
+  }
+});

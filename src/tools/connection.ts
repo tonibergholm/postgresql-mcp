@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { initializePool, closePool, getPool, IpType } from "../services/database.js";
+import { saveConnectionConfig, CONFIG_FILE } from "../services/config.js";
 
 export function registerConnectionTools(server: McpServer): void {
   server.registerTool(
@@ -65,7 +66,7 @@ Examples:
       }
 
       try {
-        await initializePool({
+        const config = {
           instanceConnectionName: params.instance_connection_name,
           host: params.host,
           port: params.port,
@@ -75,7 +76,9 @@ Examples:
           useIAMAuth: params.use_iam_auth,
           ipType: params.ip_type as IpType,
           ssl: params.ssl,
-        });
+        };
+        await initializePool(config);
+        saveConnectionConfig(config);
 
         const method = params.instance_connection_name
           ? `Cloud SQL Connector (${params.ip_type}) → ${params.instance_connection_name}`
@@ -84,7 +87,7 @@ Examples:
         return {
           content: [{
             type: "text",
-            text: `✅ Connected to PostgreSQL database "${params.database}" as "${params.user}"\nMethod: ${method}${params.use_iam_auth ? " (IAM auth)" : ""}`,
+            text: `✅ Connected to PostgreSQL database "${params.database}" as "${params.user}"\nMethod: ${method}${params.use_iam_auth ? " (IAM auth)" : ""}\n📁 Connection saved to ${CONFIG_FILE} — will auto-reconnect on next server start.`,
           }],
         };
       } catch (err) {
