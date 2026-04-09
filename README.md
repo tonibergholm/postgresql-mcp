@@ -13,9 +13,9 @@ An MCP server for Claude Code (and other MCP clients) to connect to and query GC
 | `cloudsql_list_tables` | List tables and views |
 | `cloudsql_describe_table` | Show column definitions |
 | `cloudsql_search_schema` | Search tables/columns by name pattern |
-| `cloudsql_execute` | Execute write statements (INSERT/UPDATE/DELETE/DDL) |
-| `cloudsql_explain` | Run EXPLAIN on a query |
-| `cloudsql_list_indexes` | Show table indexes |
+| `cloudsql_execute` | Execute write statements (INSERT/UPDATE/DELETE/DDL) — requires `confirm: true` |
+| `cloudsql_explain` | Run EXPLAIN / EXPLAIN ANALYZE on a query |
+| `cloudsql_list_indexes` | Show table indexes with columns, type, and constraints |
 
 ## Connection Methods
 
@@ -145,6 +145,10 @@ Add to Claude Code:
 - Statement timeout is **30s** for reads, **60s** for writes.
 - Results are **capped at 200 rows** by default (configurable up to 1000).
 - Use **parameterized queries** (`$1, $2, ...`) to prevent SQL injection.
+
+## Connection Persistence
+
+On successful connect, the server saves connection config to `~/.config/gcp-cloudsql-mcp/connection.json` (file permissions `0600`). On next server start, it automatically restores the last connection. Calling `cloudsql_connect` again overwrites the saved config.
 
 ## Multi-environment usage
 
