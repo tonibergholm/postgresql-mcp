@@ -16,6 +16,45 @@ An MCP server for Claude Code (and other MCP clients) to connect to and query GC
 | `cloudsql_execute` | Execute write statements (INSERT/UPDATE/DELETE/DDL) — requires `confirm: true` |
 | `cloudsql_explain` | Run EXPLAIN / EXPLAIN ANALYZE on a query |
 | `cloudsql_list_indexes` | Show table indexes with columns, type, and constraints |
+| `cloudsql_list_environments` | List pre-configured environments from `environments.json` |
+
+## Named Environments (easiest)
+
+Define environments in `environments.json` (repo root or `~/.config/gcp-cloudsql-mcp/`). Each environment bundles connection credentials and an optional IAP tunnel config:
+
+```json
+{
+  "my-env": {
+    "tunnel": {
+      "project": "my-gcp-project",
+      "zone": "me-central2-a",
+      "bastion": "qa-db-bastion",
+      "remoteHost": "10.2.3.8",
+      "remotePort": 5432,
+      "localPort": 5432
+    },
+    "connection": {
+      "database": "mydb",
+      "user": "myuser",
+      "password": "secret"
+    }
+  }
+}
+```
+
+Then connect with a single parameter:
+```
+cloudsql_connect:
+  environment: "my-env"
+```
+
+This will automatically:
+1. Start an IAP tunnel via `gcloud compute ssh --tunnel-through-iap`
+2. Wait for the tunnel to become ready
+3. Connect to the database through the tunnel
+4. Stop the tunnel on disconnect or server shutdown
+
+If the local port is already in use (e.g. you started the tunnel manually), it will reuse the existing tunnel.
 
 ## Connection Methods
 
