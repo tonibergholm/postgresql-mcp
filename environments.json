@@ -1,0 +1,18 @@
+{
+  "example": {
+    "tunnel": {
+      "project": "my-gcp-project",
+      "zone": "europe-west1-b",
+      "bastion": "my-bastion-host",
+      "remoteHost": "10.0.0.1",
+      "remotePort": 5432,
+      "localPort": 5432
+    },
+    "connection": {
+      "database": "mydb",
+      "user": "myuser",
+      "password": "changeme",
+      "ssl": true
+    }
+  }
+}

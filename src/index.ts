@@ -7,6 +7,7 @@ import { registerQueryTools } from "./tools/query.js";
 import { registerWriteTools } from "./tools/write.js";
 import { closePool, initializePool } from "./services/database.js";
 import { loadConnectionConfig } from "./services/config.js";
+import { stopTunnel } from "./services/tunnel.js";
 
 const server = new McpServer({
   name: "gcp-cloudsql-mcp-server",
@@ -31,15 +32,14 @@ async function autoConnectFromSavedConfig(): Promise<void> {
 }
 
 // Graceful shutdown
-process.on("SIGINT", async () => {
+async function shutdown(): Promise<void> {
   await closePool();
+  await stopTunnel();
   process.exit(0);
-});
+}
 
-process.on("SIGTERM", async () => {
-  await closePool();
-  process.exit(0);
-});
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 async function runStdio(): Promise<void> {
   const transport = new StdioServerTransport();
