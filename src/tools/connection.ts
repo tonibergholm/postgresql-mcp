@@ -1,9 +1,47 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { initializePool, closePool, getPool, IpType } from "../services/database.js";
+import { initializePool, closePool, getPool, IpType, type ConnectionConfig } from "../services/database.js";
 import { saveConnectionConfig, CONFIG_FILE } from "../services/config.js";
 import { startTunnel, stopTunnel, isTunnelRunning } from "../services/tunnel.js";
 import { getEnvironment, listEnvironments, getEnvironmentDetails } from "../services/environments.js";
+
+// "server does not support SSL connections" surfaces during the IAP-tunnel
+// readiness window: SSH `-L` opens the local listener before the channel can
+// forward bytes, so the postgres SSL probe lands somewhere that replies 'N'.
+// Match the message text rather than a stable error code — pg surfaces this
+// as a plain Error.
+function isTunnelHandshakeRace(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /server does not support SSL connections/i.test(msg)
+    || /ECONNRESET/.test(msg)
+    || /Connection terminated unexpectedly/i.test(msg);
+}
+
+async function initializePoolWithRetry(
+  config: ConnectionConfig,
+  maxAttempts: number,
+  delayMs: number,
+): Promise<void> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await initializePool(config);
+      if (attempt > 1) {
+        console.error(`[connect] Tunnel handshake succeeded on attempt ${attempt}`);
+      }
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (attempt === maxAttempts || !isTunnelHandshakeRace(err)) {
+        throw err;
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[connect] Tunnel handshake race (attempt ${attempt}/${maxAttempts}): ${msg} — retrying in ${delayMs}ms`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
 
 export function registerConnectionTools(server: McpServer): void {
   server.registerTool(
@@ -136,7 +174,16 @@ Examples:
           ipType: params.ip_type as IpType,
           ssl,
         };
-        await initializePool(config);
+        // When the IAP tunnel was just started, the local TCP port is up
+        // before the SSH channel is fully forwarding. The first postgres
+        // handshake can land on a half-ready channel and surface as
+        // "server does not support SSL connections" (server replies 'N'
+        // because the bytes never reach postgres). Retry briefly.
+        if (tunnelStarted) {
+          await initializePoolWithRetry(config, 3, 750);
+        } else {
+          await initializePool(config);
+        }
         saveConnectionConfig(config);
 
         let method: string;
